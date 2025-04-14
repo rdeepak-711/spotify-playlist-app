@@ -27,9 +27,7 @@ async def db_update_user_details(data, access_token_encrypted, refresh_token_enc
             upsert=True # if not found insert a new entry and name the document to the spotify_id
         )
         print(f"Update result: {result.modified_count} modified, {result.upserted_id} upserted")
-         # Ensure ObjectId is string before returning
-        # if result and "_id" in result:
-        #     result["_id"] = str(result["_id"])
+
         return {
             "message": "User details saved successfully",
             "details": {

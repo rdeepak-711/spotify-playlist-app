@@ -1,9 +1,11 @@
 from fastapi.responses import RedirectResponse # HTTP response that redirects the user to another URL
 from urllib.parse import urlencode # converts a dictionary into a properly formated url query string
 import httpx
-from config import REDIRECT_URI, CLIENT_ID, CLIENT_SECRET, FERNET_SECRET_KEY
-from database.user_db import db_update_user_details
-from cryptography.fernet import Fernet
+from config import REDIRECT_URI, CLIENT_ID, CLIENT_SECRET
+
+from .user import spotify_users_workflow
+from .playlist import spotify_playlists_workflow
+from database.database import users_collection
 
 async def spotify_user_login():
     spotify_authorize_url = "https://accounts.spotify.com/authorize"
@@ -55,36 +57,36 @@ async def spotify_callback_code(code: str):
         refresh_token = tokens["refresh_token"]
         access_token = tokens["access_token"]
 
-        # Current user's profile api endpoint
-        profile_endpoint = "https://api.spotify.com/v1/me"
+        # Spotify USER details added to database
+        response = await spotify_users_workflow(access_token, refresh_token)
 
-        # headers
-        headers = {
-            "Authorization": f"Bearer {access_token}"
-        }
-
-        # Sending a GET request to get the username
-        async with httpx.AsyncClient() as client:
-            response = await client.get(profile_endpoint, headers=headers)
-
-            # Return if faced with any error
-            if response.status_code!=200:
-                return {"message": "Failed to get user's playlists", "details": response.text}
-            
-            # Storing the user details
-            data = response.json()
-        
-        fernet = Fernet(FERNET_SECRET_KEY)
-
-        access_token_encrypted = fernet.encrypt(access_token.encode())
-        refresh_token_encrypted = fernet.encrypt(refresh_token.encode())
-        # Add user details to the database
-        response = await db_update_user_details(data, access_token_encrypted, refresh_token_encrypted)
-        return response["details"]
+        if response["success"]:
+            return response["details"]
+        else:
+            raise Exception(response["details"])
     
     except Exception as e:
         return {
             "success": False,
-            "message": "Failed to get tokens",
+            "message": "Failed to get tokens/Save user details",
+            "details": str(e)
+        }
+    
+async def spotify_fetch_and_store_user_playlists(spotify_user_id: str):
+    try:
+        user_cursor = await users_collection.find_one({"spotify_user_id": spotify_user_id})
+        if not user_cursor:
+            raise Exception("User not found")
+        access_token = user_cursor["access_token"]
+        response = await spotify_playlists_workflow(access_token)
+        if response["success"]:
+            return response
+        else:
+            raise Exception(response["details"])
+    
+    except Exception as e:
+        return {
+            "success": False,
+            "message": "Failed to save playlist",
             "details": str(e)
         }
