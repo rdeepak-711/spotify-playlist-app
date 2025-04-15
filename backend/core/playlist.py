@@ -68,15 +68,12 @@ async def spotify_playlists_workflow(access_token):
             first_playlist = all_playlists[0]
             playlist_id = first_playlist.get("id")
             playlist_name = first_playlist.get("name")
-            # one_track = await spotify_enrich_playlist_tracks(playlist_id=playlist_id)
-        # else:
-        #     one_track = None
+            # trackDBresponse = 
         return {
             "success": True,
             "message": "Successfully added playlists to database",
             "details": str(len(all_playlists)),
             "playlist name": playlist_name
-            # "sample_track_from_first_playlist": one_track
         }
     except Exception as e:
         return {

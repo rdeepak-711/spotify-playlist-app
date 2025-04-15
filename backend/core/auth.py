@@ -5,6 +5,7 @@ from config import REDIRECT_URI, CLIENT_ID, CLIENT_SECRET
 
 from .user import spotify_users_workflow
 from .playlist import spotify_playlists_workflow
+from .tracks import spotify_tracks_workflow
 from database.database import users_collection
 
 async def spotify_user_login():
@@ -88,5 +89,23 @@ async def spotify_fetch_and_store_user_playlists(spotify_user_id: str):
         return {
             "success": False,
             "message": "Failed to save playlist",
+            "details": str(e)
+        }
+
+async def spotify_fetch_and_store_playlists_tracks(spotify_user_id: str, playlist_spotify_id: str):
+    try:
+        user_cursor = await users_collection.find_one({"spotify_user_id": spotify_user_id})
+        if not user_cursor:
+            raise Exception("User not found")
+        access_token = user_cursor["access_token"]
+        response = await spotify_tracks_workflow(spotify_user_id, playlist_spotify_id, access_token)
+        if response["success"]:
+            return response
+        else:
+            raise Exception(response["details"])
+    except Exception as e:
+        return {
+            "success": False,
+            "message": "Unable to get tracks and save to database",
             "details": str(e)
         }

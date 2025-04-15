@@ -48,7 +48,7 @@ async def spotify_token_access_using_refresh(spotify_user_id: str):
         
         # Save the tokens - access token, refresh token
         tokens = response.json()
-         # Update the user with new access token (Spotify may or may not send new refresh_token)
+        # Update the user with new access token (Spotify may or may not send new refresh_token)
         update_data = {"access_token": tokens.get("access_token")}
         if "refresh_token" in tokens:
             update_data["refresh_token"] = fernet_key.encrypt(tokens["refresh_token"].encode())

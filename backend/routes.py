@@ -1,4 +1,4 @@
-from core.auth import spotify_user_login, spotify_callback_code, spotify_fetch_and_store_user_playlists
+from core.auth import spotify_user_login, spotify_callback_code, spotify_fetch_and_store_user_playlists, spotify_fetch_and_store_playlists_tracks
 from database.user_db import db_get_user_details
 from database.database import users_collection
 
@@ -51,8 +51,30 @@ async def spotify_user_details(spotify_user_id: str):
 @router.get("/me/playlists", summary="To get the user's spotify playlists and store it in the database")
 async def spotify_user_playlist_details(spotify_user_id: str):
     try:
-        # Fetch user data from the database (assuming you have a method to do this)
+        # Fetch user data from the database
         response = await spotify_fetch_and_store_user_playlists(spotify_user_id)
+        if response["success"]:
+            return {
+                "success": True,
+                "message": "Successfully added playlist data to database",
+                "details": str(response)
+            }
+        else:
+            raise Exception(response["details"])
+    
+    except Exception as e:
+        return {
+            "success": False,
+            "message": "An error occurred while fetching user playlist",
+            "details": str(e)
+        }
+
+# Fetching the tracks given the playlist id
+@router.get("/me/playlists/tracks", summary="To get the tracks given the spotify playlists and store it in the database")
+async def spotify_user_tracks_details(spotify_user_id: str, playlist_spotify_id: str):
+    try:
+        # Fetch user data from the database (assuming you have a method to do this)
+        response = await spotify_fetch_and_store_playlists_tracks(spotify_user_id, playlist_spotify_id)
         if response["success"]:
             return {
                 "success": True,
