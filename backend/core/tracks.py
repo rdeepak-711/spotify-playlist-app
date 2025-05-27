@@ -10,7 +10,7 @@ async def spotify_tracks_workflow(spotify_user_id, playlist_id, access_token):
         fernet_key = Fernet(FERNET_SECRET_KEY)
         access_token = fernet_key.decrypt(access_token).decode()
         # GET endpoint to get all the tracks using the playlist id
-        tracks_endpoint = f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks"
+        tracks_endpoint = f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks?market='IN'"
         
         headers = {
             "Authorization": f"Bearer {access_token}",
@@ -62,7 +62,6 @@ async def spotify_tracks_workflow(spotify_user_id, playlist_id, access_token):
                         "is_enriched": False
                     }
                     all_tracks.append(track_data)
-
                 if len(items)<limit:
                     break
                 offset+=limit

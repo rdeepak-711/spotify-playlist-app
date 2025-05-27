@@ -9,6 +9,9 @@ __pycache__/
 ./backend/access_token.json
 ./backend/refresh_token.json
 
+#testing folder
+testing
+
 # VSCode
 .vscode/
 
