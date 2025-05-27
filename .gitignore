@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+
+# Environment
+.env
+
+# Token storage
+./backend/access_token.json
+./backend/refresh_token.json
+
+#testing folder
+testing
+
+# VSCode
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
