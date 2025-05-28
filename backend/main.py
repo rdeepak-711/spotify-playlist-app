@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import FRONTEND_ORIGINS
-
 from routes import router
 
 app = FastAPI()

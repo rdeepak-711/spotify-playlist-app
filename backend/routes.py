@@ -1,6 +1,7 @@
 from core.auth import spotify_user_login, spotify_callback_code, spotify_fetch_and_store_user_playlists, spotify_fetch_and_store_playlists_tracks
 from database.user_db import db_get_user_details
 from database.database import users_collection
+from core.tracks import fetch_and_store_liked_songs_tracks
 
 from fastapi import APIRouter
 from fastapi.responses import RedirectResponse
@@ -40,9 +41,14 @@ async def spotify_user_details(spotify_user_id: str):
         user_data = await db_get_user_details(spotify_user_id)
         # If no user found, return an error message
         if not user_data:
-            return {"message": "User data not found."}
-
-        return RedirectResponse(url=f"/me/playlists?spotify_user_id={spotify_user_id}")
+            return {
+                "success": False,
+                "message": "User data not found."
+            }
+        return {
+            "success": True,
+            "message": "User found"
+        }
     
     except Exception as e:
         return {"message": "An error occurred while fetching user data", "error": str(e)}
@@ -89,4 +95,21 @@ async def spotify_user_tracks_details(spotify_user_id: str, playlist_spotify_id:
             "success": False,
             "message": "An error occurred while fetching user playlist",
             "details": str(e)
+        }
+
+@router.get("/me/tracks", summary="Fetch and enrich user's liked songs, returning the count")
+async def enrich_liked_songs(spotify_user_id: str):
+    result = await fetch_and_store_liked_songs_tracks(spotify_user_id)
+    if result.get("success"):
+        return {
+            "success": True,
+            "message": f"Successfully processed {result.get('tracks_saved', 0)} liked songs.",
+            "details": result.get("details", "")
+        }
+    else:
+        return {
+            "success": False,
+            "message": result.get("message", "Failed to process liked songs."),
+            "details": result.get("details", ""),
+            "tracks_saved": result.get("tracks_saved", 0)
         }

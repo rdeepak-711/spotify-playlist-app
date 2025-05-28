@@ -14,7 +14,7 @@ async def spotify_user_login():
         "client_id": CLIENT_ID,
         "response_type": "code",
         "redirect_uri": REDIRECT_URI,
-        "scope": "user-read-private user-read-email"
+        "scope": "user-read-private user-read-email user-library-read"
     }
     query_string = urlencode(params_dict)
 

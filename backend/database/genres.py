@@ -1,5 +1,5 @@
 # Main genre list
-GENRES = ["Pop", "Rock", "Hip Hop", "R&B", "Country", "Electronic","Classical", "Jazz", "Reggae", "Blues", "Latin", "Folk","Metal", "Punk", "Gospel", "World", "Soundtrack", "K-Pop", "Afrobeats", "Indie", "Alternative"]
+GENRES = ["Pop", "Rock", "Hip Hop", "R&B", "Country", "Electronic","Classical", "Jazz", "Reggae", "Blues", "Latin", "Folk","Metal", "Punk", "Gospel", "World", "K-Pop", "Afrobeats", "Indie", "Alternative"]
 
 # Genre to subgenre mapping
 SUBGENRES = {
@@ -19,7 +19,6 @@ SUBGENRES = {
     "Punk": ["Hardcore Punk", "Pop Punk", "Post-Punk"],
     "Gospel": ["Christian Rock", "Contemporary Christian", "Traditional Gospel"],
     "World": ["Bhangra", "Afrobeat", "Flamenco", "Arabic Pop"],
-    "Soundtrack": ["Film Score", "TV Soundtrack", "Game Soundtrack"],
     "K-Pop": ["Korean Pop", "K-R&B", "K-Hip Hop"],
     "Afrobeats": ["Afropop", "Alté", "Naija"],
     "Indie": ["Indie Rock", "Indie Pop", "Lo-fi"],

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
-from typing import Optional, Dict
+from typing import Optional
 
 class SpotifyUserDetails(BaseModel):
     spotify_user_id: str
@@ -9,9 +9,11 @@ class SpotifyUserDetails(BaseModel):
     country: str
     profile_picture: Optional[str] = None # Some users might not have one
     created_at: datetime
-    is_enriched: bool = False
     access_token: str
     refresh_token: str
+    credits: int = 0
+    signup_enriched: bool = False
+    is_enriched: bool = False
 
 class SpotifyUserPlaylistDetails(BaseModel):
     owner_spotify_id: str
@@ -32,8 +34,11 @@ class SpotifyTrackDetails(BaseModel):
     track_artists: list[str]
     track_album_name: str
     track_external_url: str
-    track_preview_url: str | None
+    track_preview_url: Optional[str]
     track_genre: list[str]
-    track_language: list[str]
+    track_language: str
     track_duration_ms: int
     is_enriched: bool = False
+    connected_ids: list[str] = []
+    contributor: str | None = None  # Spotify user ID who enriched this track
+    users_with_track: list[str] = []  # All user IDs who have this track

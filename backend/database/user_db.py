@@ -13,7 +13,9 @@ async def db_update_user_details(data, access_token_encrypted, refresh_token_enc
         "created_at": datetime.utcnow(),
         "is_enriched": False,
         "access_token": access_token_encrypted,
-        "refresh_token": refresh_token_encrypted
+        "refresh_token": refresh_token_encrypted,
+        "credits": 0,
+        "signup_enriched": False
     }
 
     # Create a SpotifyUserDetails model instance using the user_data variable
