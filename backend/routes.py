@@ -60,13 +60,16 @@ async def spotify_user_details(spotify_user_id: str):
                 "message": "User data not found."
             }
         
-        # Convert MongoDB document to dict and handle ObjectId
+        # Convert MongoDB document to dict and include all relevant fields
         user_dict = {
             "spotify_user_id": str(user_data.get("spotify_user_id")),
-            "display_name": user_data.get("display_name"),
+            "username": user_data.get("username"),
             "email": user_data.get("email"),
-            "access_token": user_data.get("access_token"),
-            "refresh_token": user_data.get("refresh_token")
+            "country": user_data.get("country"),
+            "profile_picture": user_data.get("profile_picture"),
+            "created_at": user_data.get("created_at"),
+            "credits": user_data.get("credits", 0),
+            "is_enriched": user_data.get("is_enriched", False)
         }
         
         return {

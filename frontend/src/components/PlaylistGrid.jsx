@@ -1,7 +1,23 @@
-import PlaylistCard from "./PlaylistCard";
 import { useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import PlaylistCard from "./PlaylistCard";
+import Skeleton from "./Skeleton";
 
-export default function PlaylistGrid({ playlists, onPlaylistClick }) {
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+export default function PlaylistGrid({
+  playlists,
+  onPlaylistClick,
+  isLoading,
+}) {
   // Memoize the sorted playlists to prevent unnecessary re-renders
   const sorted = useMemo(() => {
     const sortedPlaylists = [
@@ -33,23 +49,38 @@ export default function PlaylistGrid({ playlists, onPlaylistClick }) {
     }
 
     return sortedPlaylists;
-  }, [playlists]); // Only re-sort when playlists change
+  }, [playlists]);
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-[var(--spacing-md)] p-[var(--spacing-md)]">
+        {[...Array(8)].map((_, i) => (
+          <Skeleton
+            key={i}
+            className="aspect-square rounded-[var(--radius-lg)]"
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-8">
-      {sorted.map((playlist) => {
-        const key = playlist.playlist_spotify_id;
-        if (!key) {
-          console.error("Playlist missing ID:", playlist);
-        }
-        return (
+    <motion.div
+      variants={container}
+      initial="hidden"
+      animate="show"
+      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-[var(--spacing-md)] p-[var(--spacing-md)]"
+    >
+      <AnimatePresence>
+        {sorted.map((playlist, index) => (
           <PlaylistCard
-            key={key}
+            key={playlist.playlist_spotify_id}
             playlist={playlist}
             onClick={onPlaylistClick}
+            index={index}
           />
-        );
-      })}
-    </div>
+        ))}
+      </AnimatePresence>
+    </motion.div>
   );
 }

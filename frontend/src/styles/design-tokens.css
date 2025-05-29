@@ -1,0 +1,58 @@
+:root {
+  /* Color System */
+  --spotify-green: #1db954;
+  --spotify-green-hover: #1ed760;
+  --spotify-black: #121212;
+  --surface-light: #282828;
+  --surface-light-hover: #2a2a2a;
+
+  /* Text Colors */
+  --text-primary: #ffffff;
+  --text-secondary: #b3b3b3;
+  --text-tertiary: #686868;
+
+  /* Gradients */
+  --gradient-base: linear-gradient(
+    180deg,
+    var(--surface-light) 0%,
+    var(--spotify-black) 100%
+  );
+  --gradient-hover: linear-gradient(
+    180deg,
+    var(--surface-light-hover) 0%,
+    var(--spotify-black) 100%
+  );
+
+  /* Spacing System */
+  --spacing-xs: 0.25rem; /* 4px */
+  --spacing-sm: 0.5rem; /* 8px */
+  --spacing-md: 1rem; /* 16px */
+  --spacing-lg: 1.5rem; /* 24px */
+  --spacing-xl: 2rem; /* 32px */
+  --spacing-xxl: 3rem; /* 48px */
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.14);
+  --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.2);
+
+  /* Animation Timing */
+  --transition-fast: 150ms ease;
+  --transition-base: 300ms ease;
+  --transition-slow: 500ms ease;
+  --transition-bounce: 500ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* Z-index Scale */
+  --z-base: 1;
+  --z-above: 2;
+  --z-modal: 10;
+  --z-overlay: 20;
+  --z-max: 999;
+}
