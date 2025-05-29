@@ -20,6 +20,8 @@ async def spotify_token_access_using_refresh(spotify_user_id: str):
                 "message": "Refresh token not found for user",
                 "details": "Database doesn't have refresh for the user"
             }
+        
+        # Decrypt the stored refresh token
         refresh_token = fernet_key.decrypt(user["refresh_token"]).decode()
 
         # Token URL to get the access token
@@ -43,27 +45,43 @@ async def spotify_token_access_using_refresh(spotify_user_id: str):
             response = await client.post(token_url, data=data, headers=headers)
         
         # Return if faced with any error
-        if response.status_code!=200:
-            return {"message": "Failed to get token", "details": response.text}
+        if response.status_code != 200:
+            return {"success": False, "message": "Failed to get token", "details": response.text}
         
         # Save the tokens - access token, refresh token
         tokens = response.json()
-        # Update the user with new access token (Spotify may or may not send new refresh_token)
-        update_data = {"access_token": tokens.get("access_token")}
+        
+        # Encrypt the new access token
+        new_access_token = tokens["access_token"]
+        encrypted_access_token = fernet_key.encrypt(new_access_token.encode())
+        
+        # Update data for database
+        update_data = {"access_token": encrypted_access_token}
+        
+        # If we got a new refresh token, encrypt and store it too
         if "refresh_token" in tokens:
-            update_data["refresh_token"] = fernet_key.encrypt(tokens["refresh_token"].encode())
+            new_refresh_token = tokens["refresh_token"]
+            encrypted_refresh_token = fernet_key.encrypt(new_refresh_token.encode())
+            update_data["refresh_token"] = encrypted_refresh_token
 
-        await users_collection.update_one({"spotify_id": spotify_user_id}, {"$set": update_data})
+        # Update the database with encrypted tokens
+        await users_collection.update_one(
+            {"spotify_user_id": spotify_user_id},
+            {"$set": update_data}
+        )
 
         return {
             "success": True,
-            "message": "Successfully got tokens",
-            "details": str(tokens)
+            "message": "Successfully refreshed tokens",
+            "details": {
+                "access_token": new_access_token  # Return unencrypted token for frontend use
+            }
         }
 
     except Exception as e:
+        print(f"Token refresh error: {str(e)}")
         return {
             "success": False,
-            "message": "Unable to get the token",
+            "message": "Unable to refresh token",
             "details": str(e)
         }

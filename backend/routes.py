@@ -2,6 +2,7 @@ from core.auth import spotify_user_login, spotify_callback_code, spotify_fetch_a
 from database.user_db import db_get_user_details
 from core.tracks import fetch_and_store_liked_songs_tracks
 from config import FRONTEND_URL
+from core.tokens import spotify_token_access_using_refresh
 
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
@@ -15,14 +16,17 @@ async def root_redirect():
 # Login get request which when hit redirects the user to authorize their spotify account. If logged in then just authorize else log in option too.
 @router.get("/login", summary="Redirect user to Spotify login")
 async def spotify_login():
-    print("Login endpoint called")
     try:
         auth_url = await spotify_user_login()
         response = {"redirectUrl": auth_url}
         return response
     except Exception as e:
         print(f"Error in login endpoint: {str(e)}")
-        raise
+        return {
+            "success": False,
+            "message": "Failed to generate Spotify login URL",
+            "error": str(e)
+        }
 
 # Callback function when the user authorize the login using spotify
 @router.get("/callback", summary="Callback url returns with the code needed for further usage of the user's spotify data")
@@ -88,11 +92,9 @@ async def get_user_from_cookie(request: Request):
 # Fetching the user's playlist and storing it in the database
 @router.get("/me/playlists", summary="To get the user's spotify playlists and store it in the database")
 async def spotify_user_playlist_details(spotify_user_id: str):
-    print(f"Playlists endpoint called for user: {spotify_user_id}")
     try:
         # Fetch user data from the database
         response = await spotify_fetch_and_store_user_playlists(spotify_user_id)
-        print(f"Playlists response: {response}")
         
         if response["success"]:
             return {
@@ -149,4 +151,38 @@ async def enrich_liked_songs(spotify_user_id: str):
             "message": result.get("message", "Failed to process liked songs."),
             "details": result.get("details", ""),
             "tracks_saved": result.get("tracks_saved", 0)
+        }
+
+@router.post("/refresh-token", summary="Refresh access token using stored refresh token")
+async def refresh_access_token(request: Request):
+    try:
+        body = await request.json()
+        spotify_user_id = body.get("spotify_user_id")
+        
+        if not spotify_user_id:
+            return {
+                "success": False,
+                "message": "spotify_user_id is required"
+            }
+            
+        refresh_result = await spotify_token_access_using_refresh(spotify_user_id)
+        
+        if refresh_result["success"]:
+            return {
+                "success": True,
+                "access_token": refresh_result["details"]["access_token"]
+            }
+        else:
+            return {
+                "success": False,
+                "message": "Token refresh failed",
+                "error": refresh_result["details"]
+            }
+            
+    except Exception as e:
+        print(f"Error in refresh-token endpoint: {str(e)}")
+        return {
+            "success": False,
+            "message": "Failed to refresh token",
+            "error": str(e)
         }

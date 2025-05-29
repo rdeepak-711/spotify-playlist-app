@@ -28,7 +28,6 @@ async def db_update_user_details(data, access_token_encrypted, refresh_token_enc
             {"$set": user_model.dict()}, # set or update the fields
             upsert=True # if not found insert a new entry and name the document to the spotify_id
         )
-        print(f"Update result: {result.modified_count} modified, {result.upserted_id} upserted")
 
         return {
             "message": "User details saved successfully",
