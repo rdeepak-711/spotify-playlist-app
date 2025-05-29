@@ -1,11 +1,13 @@
 from cryptography.fernet import Fernet
 import httpx
+from database.database import playlists_collection
 
 from config import FERNET_SECRET_KEY
 from .tokens import spotify_token_access_using_refresh
 from database.playlist_db import db_update_playlists_details
 
-async def spotify_playlists_workflow(access_token):
+async def spotify_playlists_workflow(access_token: str):
+    print("Starting playlist workflow")
     try:
         fernet_key = Fernet(FERNET_SECRET_KEY)
         access_token = fernet_key.decrypt(access_token).decode()
@@ -76,6 +78,7 @@ async def spotify_playlists_workflow(access_token):
             "playlist name": playlist_name
         }
     except Exception as e:
+        print(f"Error in playlist workflow: {str(e)}")
         return {
             "success": False,
             "message": "Unable to get the user's playlists details",

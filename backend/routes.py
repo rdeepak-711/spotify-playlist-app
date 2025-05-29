@@ -1,9 +1,9 @@
 from core.auth import spotify_user_login, spotify_callback_code, spotify_fetch_and_store_user_playlists, spotify_fetch_and_store_playlists_tracks
 from database.user_db import db_get_user_details
-from database.database import users_collection
 from core.tracks import fetch_and_store_liked_songs_tracks
+from config import FRONTEND_URL
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 
 router = APIRouter()
@@ -15,7 +15,14 @@ async def root_redirect():
 # Login get request which when hit redirects the user to authorize their spotify account. If logged in then just authorize else log in option too.
 @router.get("/login", summary="Redirect user to Spotify login")
 async def spotify_login():
-    return await spotify_user_login()
+    print("Login endpoint called")
+    try:
+        auth_url = await spotify_user_login()
+        response = {"redirectUrl": auth_url}
+        return response
+    except Exception as e:
+        print(f"Error in login endpoint: {str(e)}")
+        raise
 
 # Callback function when the user authorize the login using spotify
 @router.get("/callback", summary="Callback url returns with the code needed for further usage of the user's spotify data")
@@ -30,45 +37,75 @@ async def spotify_login_callback(code: str):
         }
     spotify_user_id = user_data["spotify_user_id"]
     
-    response = RedirectResponse(url=f"/me?spotify_user_id={spotify_user_id}")
+    # Redirect to frontend callback URL instead of /me
+    response = RedirectResponse(url=f"{FRONTEND_URL}/callback?spotify_user_id={spotify_user_id}")
     return response
 
 # Fetching the user details and adding it to database
 @router.get("/me", summary="To get the user's Spotify user details and adding it to database")
 async def spotify_user_details(spotify_user_id: str):
     try:
-        # Fetch user data from the database (assuming you have a method to do this)
+        # Fetch user data from the database
         user_data = await db_get_user_details(spotify_user_id)
+        
         # If no user found, return an error message
         if not user_data:
+            print("No user data found")
             return {
                 "success": False,
                 "message": "User data not found."
             }
+        
+        # Convert MongoDB document to dict and handle ObjectId
+        user_dict = {
+            "spotify_user_id": str(user_data.get("spotify_user_id")),
+            "display_name": user_data.get("display_name"),
+            "email": user_data.get("email"),
+            "access_token": user_data.get("access_token"),
+            "refresh_token": user_data.get("refresh_token")
+        }
+        
         return {
             "success": True,
-            "message": "User found"
+            "user_data": user_dict
+        }
+
+    except Exception as e:
+        print(f"Error in /me endpoint: {str(e)}")
+        return {
+            "success": False,
+            "message": "An error occurred while fetching user data",
+            "error": str(e)
         }
     
-    except Exception as e:
-        return {"message": "An error occurred while fetching user data", "error": str(e)}
+@router.get("/auth/me", summary="Check if user is authenticated")
+async def get_user_from_cookie(request: Request):
+    token = request.cookies.get("access_token")
+    if not token:
+        return {"success": False}
+    return {"success": True}
     
 # Fetching the user's playlist and storing it in the database
 @router.get("/me/playlists", summary="To get the user's spotify playlists and store it in the database")
 async def spotify_user_playlist_details(spotify_user_id: str):
+    print(f"Playlists endpoint called for user: {spotify_user_id}")
     try:
         # Fetch user data from the database
         response = await spotify_fetch_and_store_user_playlists(spotify_user_id)
+        print(f"Playlists response: {response}")
+        
         if response["success"]:
             return {
                 "success": True,
                 "message": "Successfully added playlist data to database",
-                "details": str(response)
+                "details": response.get("details", [])
             }
         else:
+            print(f"Error in playlists response: {response['details']}")
             raise Exception(response["details"])
     
     except Exception as e:
+        print(f"Error in playlists endpoint: {str(e)}")
         return {
             "success": False,
             "message": "An error occurred while fetching user playlist",

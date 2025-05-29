@@ -19,8 +19,7 @@ async def spotify_user_login():
     query_string = urlencode(params_dict)
 
     redirect_url = f"{spotify_authorize_url}?{query_string}"
-
-    return RedirectResponse(redirect_url)
+    return redirect_url
 
 async def spotify_callback_code(code: str):
     try:
