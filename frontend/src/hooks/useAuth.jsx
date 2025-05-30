@@ -13,10 +13,24 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
 
+  const initiateSpotifyLogin = async () => {
+    try {
+      const response = await api.get("/login");
+      if (response.data && response.data.redirectUrl) {
+        window.location.href = response.data.redirectUrl;
+      }
+    } catch (error) {
+      console.error("Failed to initiate Spotify login:", error);
+    }
+  };
+
   const refreshToken = async () => {
     try {
       const authData = await getAuthData();
-      if (!authData?.spotify_user_id) return false;
+      if (!authData?.spotify_user_id) {
+        await initiateSpotifyLogin();
+        return false;
+      }
 
       const response = await api.post("/refresh-token", {
         spotify_user_id: authData.spotify_user_id,
@@ -30,9 +44,11 @@ export const AuthProvider = ({ children }) => {
         });
         return true;
       }
+      await initiateSpotifyLogin();
       return false;
     } catch (error) {
       console.error("Token refresh failed:", error);
+      await initiateSpotifyLogin();
       return false;
     }
   };
@@ -44,6 +60,7 @@ export const AuthProvider = ({ children }) => {
       if (!authData) {
         setIsAuthenticated(false);
         setUser(null);
+        await initiateSpotifyLogin();
         return;
       }
 
@@ -59,6 +76,7 @@ export const AuthProvider = ({ children }) => {
           await clearAuthData();
           setIsAuthenticated(false);
           setUser(null);
+          await initiateSpotifyLogin();
         } else {
           // If refresh was successful, set authenticated state
           setIsAuthenticated(true);
@@ -73,6 +91,7 @@ export const AuthProvider = ({ children }) => {
         await clearAuthData();
         setIsAuthenticated(false);
         setUser(null);
+        await initiateSpotifyLogin();
       } else {
         // If refresh was successful, set authenticated state
         const authData = await getAuthData();
@@ -105,6 +124,7 @@ export const AuthProvider = ({ children }) => {
       console.error("AuthProvider: Login failed:", error);
       setIsAuthenticated(false);
       setUser(null);
+      await initiateSpotifyLogin();
     }
   };
 

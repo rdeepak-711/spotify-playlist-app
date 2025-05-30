@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 
-const defaultPlaylistImage = "/default-playlist.svg";
+const defaultPlaylistImage = "/default_playlist.jpg";
 
 const item = {
   hidden: { opacity: 0, y: 20 },

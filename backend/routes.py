@@ -1,10 +1,12 @@
 from core.auth import spotify_user_login, spotify_callback_code, spotify_fetch_and_store_user_playlists, spotify_fetch_and_store_playlists_tracks
 from database.user_db import db_get_user_details
 from core.tracks import fetch_and_store_liked_songs_tracks
+from core.playlist import fetch_playlist_tracks_background
 from config import FRONTEND_URL
 from core.tokens import spotify_token_access_using_refresh
+from database.database import users_collection, playlists_collection
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, BackgroundTasks
 from fastapi.responses import RedirectResponse
 
 router = APIRouter()
@@ -139,23 +141,6 @@ async def spotify_user_tracks_details(spotify_user_id: str, playlist_spotify_id:
             "details": str(e)
         }
 
-@router.get("/me/tracks", summary="Fetch and enrich user's liked songs, returning the count")
-async def enrich_liked_songs(spotify_user_id: str):
-    result = await fetch_and_store_liked_songs_tracks(spotify_user_id)
-    if result.get("success"):
-        return {
-            "success": True,
-            "message": f"Successfully processed {result.get('tracks_saved', 0)} liked songs.",
-            "details": result.get("details", "")
-        }
-    else:
-        return {
-            "success": False,
-            "message": result.get("message", "Failed to process liked songs."),
-            "details": result.get("details", ""),
-            "tracks_saved": result.get("tracks_saved", 0)
-        }
-
 @router.post("/refresh-token", summary="Refresh access token using stored refresh token")
 async def refresh_access_token(request: Request):
     try:
@@ -188,4 +173,96 @@ async def refresh_access_token(request: Request):
             "success": False,
             "message": "Failed to refresh token",
             "error": str(e)
+        }
+
+@router.post("/me/liked-songs/fetch")
+async def fetch_liked_songs_background(background_tasks: BackgroundTasks, spotify_user_id: str):
+    """Endpoint to trigger background fetching of liked songs."""
+    try:
+        # Add the fetch_and_store_liked_songs_tracks function to background tasks
+        background_tasks.add_task(fetch_and_store_liked_songs_tracks, spotify_user_id)
+        
+        return {
+            "success": True,
+            "message": "Started fetching liked songs in the background"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": "Failed to start background task",
+            "details": str(e)
+        }
+
+@router.post("/me/playlists/{playlist_id}/fetch-tracks")
+async def fetch_playlist_tracks_background_endpoint(
+    background_tasks: BackgroundTasks, 
+    spotify_user_id: str, 
+    playlist_id: str
+):
+    try:
+        # Get user's access token
+        user = await users_collection.find_one({"spotify_user_id": spotify_user_id})
+        if not user:
+            return {
+                "success": False,
+                "message": "User not found"
+            }
+        
+        # Add the fetch_playlist_tracks_background function to background tasks
+        background_tasks.add_task(
+            fetch_playlist_tracks_background,
+            spotify_user_id,
+            playlist_id,
+            user["access_token"]
+        )
+        
+        return {
+            "success": True,
+            "message": f"Started fetching tracks for playlist {playlist_id} in the background"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": "Failed to start background task",
+            "details": str(e)
+        }
+
+@router.post("/me/playlists/fetch-all-tracks")
+async def fetch_all_playlists_tracks_background(
+    background_tasks: BackgroundTasks, 
+    spotify_user_id: str
+):
+    try:
+        # Get user's access token
+        user = await users_collection.find_one({"spotify_user_id": spotify_user_id})
+        if not user:
+            return {
+                "success": False,
+                "message": "User not found"
+            }
+
+        # Get all playlists for the user
+        playlists = await playlists_collection.find(
+            {"owner_spotify_id": spotify_user_id}
+        ).to_list(length=None)
+
+        # Add background tasks for each playlist
+        for playlist in playlists:
+            playlist_id = playlist["playlist_spotify_id"]
+            background_tasks.add_task(
+                fetch_playlist_tracks_background,
+                spotify_user_id,
+                playlist_id,
+                user["access_token"]
+            )
+
+        return {
+            "success": True,
+            "message": f"Started fetching tracks for {len(playlists)} playlists in the background"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": "Failed to start background tasks",
+            "details": str(e)
         }

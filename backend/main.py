@@ -1,10 +1,19 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp
 
 from config import FRONTEND_ORIGINS
 from routes import router
 
-app = FastAPI()
+class DevToolsFilterMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if ".well-known/appspecific/com.chrome.devtools" in request.url.path:
+            # Return 404 without logging
+            return await call_next(request)
+        return await call_next(request)
+
+app = FastAPI(docs_url=None, redoc_url=None)  # Disable automatic API docs endpoints
 
 # Configure CORS
 origins = str(FRONTEND_ORIGINS).split(",")
@@ -18,5 +27,8 @@ app.add_middleware(
     expose_headers=["*"],
     max_age=3600,
 )
+
+# Add DevTools filter middleware
+app.add_middleware(DevToolsFilterMiddleware)
 
 app.include_router(router)

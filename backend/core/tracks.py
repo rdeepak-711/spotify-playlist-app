@@ -71,47 +71,28 @@ async def fetch_and_store_liked_songs_tracks(spotify_user_id):
                                 {"track_spotify_id": track_spotify_id},
                                 {"$set": {"users_with_track": users_with_track}}
                             )
-                        continue  # Skip enrichment and adding new track
-                    else:
-                        # Track not enriched or not present, proceed with enrichment and saving
-                        try:
-                            lang_result = await detect_song_language_genre_subgenre(
-                                track.get("name"),
-                                [artist["name"] for artist in track.get("artists", [])],
-                                (track.get("album") or {}).get("name", "")
-                            )
-                            if lang_result["success"]:
-                                # After getting track_language from enrichment
-                                track_language = lang_result["details"]["language"]
-                                track_genre = lang_result["details"]["genre"] if lang_result["details"]["genre"] else ""
-                                track_subgenre = lang_result["details"]["subgenre"] if lang_result["details"]["subgenre"] else ""
-                            else:
-                                track_language = ""
-                                track_genre = ""
-                                track_subgenre = ""
-                        except Exception:
-                            track_language = ""
-                            track_genre = ""
-                            track_subgenre = ""
-                        track_data = {
-                            "spotify_user_id": spotify_user_id,
-                            "playlist_spotify_id": LIKED_SONGS_PLAYLIST_ID,
-                            "track_spotify_id": track.get("id"),
-                            "track_name": track.get("name"),
-                            "track_artists": [artist["name"] for artist in track.get("artists", [])],
-                            "track_album_name": track.get("album", {}).get("name"),
-                            "track_external_url": track.get("external_urls", {}).get("spotify"),
-                            "track_preview_url": track.get("preview_url"),
-                            "track_genre": [track_genre, track_subgenre],
-                            "track_language": track_language,
-                            "track_duration_ms": track.get("duration_ms"),
-                            "is_enriched": True,
-                            "connected_ids": [],
-                            "users_with_track": [spotify_user_id]
-                        }
-                        # Save track to DB
-                        await db_update_track_details(track_data)
-                        all_tracks.append(track_data)
+                        continue  # Skip adding new track
+                    
+                    # Track not present, add basic details without enrichment
+                    track_data = {
+                        "spotify_user_id": spotify_user_id,
+                        "playlist_spotify_id": LIKED_SONGS_PLAYLIST_ID,
+                        "track_spotify_id": track.get("id"),
+                        "track_name": track.get("name"),
+                        "track_artists": [artist["name"] for artist in track.get("artists", [])],
+                        "track_album_name": track.get("album", {}).get("name"),
+                        "track_external_url": track.get("external_urls", {}).get("spotify"),
+                        "track_preview_url": track.get("preview_url"),
+                        "track_genre": [],  # Empty until enriched
+                        "track_language": "",  # Empty until enriched
+                        "track_duration_ms": track.get("duration_ms"),
+                        "is_enriched": False,
+                        "connected_ids": [],
+                        "users_with_track": [spotify_user_id]
+                    }
+                    # Save track to DB
+                    await db_update_track_details(track_data)
+                    all_tracks.append(track_data)
                 # Pagination
                 if data.get("next"):
                     offset += limit
@@ -123,8 +104,6 @@ async def fetch_and_store_liked_songs_tracks(spotify_user_id):
         # Update playlist track count
         playlist_data["playlist_tracks_count"] = len(all_tracks)
         await db_update_playlists_details(playlist_data)
-
-        await update_playlist_enriched_status(LIKED_SONGS_PLAYLIST_ID)
 
         return {
             "success": True,
@@ -359,3 +338,163 @@ async def update_playlist_enriched_status(playlist_spotify_id, track_count):
             {"playlist_spotify_id": playlist_spotify_id},
             {"$set": {"is_enriched": False}}
         )
+
+async def enrich_track(track_spotify_id: str, contributor_id: str = None):
+    try:
+        # Get track from database
+        track = await tracks_collection.find_one({"track_spotify_id": track_spotify_id})
+        if not track:
+            raise Exception("Track not found in database")
+        
+        if track.get("is_enriched", False):
+            return {
+                "success": True,
+                "message": "Track already enriched",
+                "details": track
+            }
+
+        # Detect language and genre
+        lang_result = await detect_song_language_genre_subgenre(
+            track["track_name"],
+            track["track_artists"],
+            track["track_album_name"]
+        )
+
+        if lang_result["success"]:
+            # Update track with enriched data
+            update_data = {
+                "track_language": lang_result["details"]["language"],
+                "track_genre": [
+                    lang_result["details"]["genre"] if lang_result["details"]["genre"] else "",
+                    lang_result["details"]["subgenre"] if lang_result["details"]["subgenre"] else ""
+                ],
+                "is_enriched": True
+            }
+            
+            if contributor_id:
+                update_data["contributor"] = contributor_id
+
+            # Update track in database
+            await tracks_collection.update_one(
+                {"track_spotify_id": track_spotify_id},
+                {"$set": update_data}
+            )
+
+            # Update playlist enrichment status
+            playlists = await tracks_collection.distinct(
+                "playlist_spotify_id",
+                {"track_spotify_id": track_spotify_id}
+            )
+            for playlist_id in playlists:
+                await update_playlist_enriched_status(playlist_id)
+
+            return {
+                "success": True,
+                "message": "Track enriched successfully",
+                "details": {**track, **update_data}
+            }
+        else:
+            raise Exception(f"Language detection failed: {lang_result['details']}")
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": "Failed to enrich track",
+            "details": str(e)
+        }
+
+async def enrich_playlist_tracks(playlist_spotify_id: str, contributor_id: str = None):
+    try:
+        # Get all unenriched tracks for the playlist
+        tracks = await tracks_collection.find({
+            "playlist_spotify_id": playlist_spotify_id,
+            "is_enriched": False
+        }).to_list(length=None)
+
+        enriched_count = 0
+        errors = []
+
+        for track in tracks:
+            result = await enrich_track(track["track_spotify_id"], contributor_id)
+            if result["success"]:
+                enriched_count += 1
+            else:
+                errors.append({
+                    "track_id": track["track_spotify_id"],
+                    "error": result["details"]
+                })
+
+        return {
+            "success": True,
+            "message": f"Enriched {enriched_count} tracks",
+            "details": {
+                "enriched_count": enriched_count,
+                "total_tracks": len(tracks),
+                "errors": errors
+            }
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": "Failed to enrich playlist tracks",
+            "details": str(e)
+        }
+
+async def check_and_create_liked_songs_playlist(spotify_user_id):
+    """Quickly check if user has any liked songs and create a playlist entry."""
+    try:
+        user_cursor = await users_collection.find_one({"spotify_user_id": spotify_user_id})
+        if not user_cursor:
+            raise Exception("User not found")
+        encrypted_access_token = user_cursor["access_token"]
+        fernet_key = Fernet(FERNET_SECRET_KEY)
+        access_token = fernet_key.decrypt(encrypted_access_token).decode()
+        headers = {
+            "Authorization": f"Bearer {access_token}"
+        }
+        
+        # Just fetch one song to check if there are any liked songs
+        params = {"limit": 1, "offset": 0}
+        async with httpx.AsyncClient() as client:
+            response = await client.get(SPOTIFY_LIKED_SONGS_ENDPOINT, headers=headers, params=params)
+            
+        if response.status_code != 200:
+            raise Exception(f"Spotify API error: {response.status_code} {response.text}")
+            
+        data = response.json()
+        total_tracks = data.get("total", 0)
+        
+        if total_tracks > 0:
+            # Create/Update the Liked Songs playlist entry
+            playlist_data = {
+                "owner_spotify_id": spotify_user_id,
+                "playlist_name": "Liked Songs",
+                "playlist_tracks_count": total_tracks,  # Use the total count from API
+                "playlist_dp": None,
+                "playlist_spotify_id": LIKED_SONGS_PLAYLIST_ID,
+                "external_url_playlist": "",
+                "is_public": False,
+                "playlist_description": "Your liked songs on Spotify",
+                "is_enriched": False
+            }
+            await db_update_playlists_details(playlist_data)
+            
+            return {
+                "success": True,
+                "has_liked_songs": True,
+                "total_tracks": total_tracks
+            }
+        
+        return {
+            "success": True,
+            "has_liked_songs": False,
+            "total_tracks": 0
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": "Failed to check liked songs",
+            "details": str(e)
+        }

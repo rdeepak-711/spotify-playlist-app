@@ -19,3 +19,6 @@ testing
 # OS files
 .DS_Store
 Thumbs.db
+
+# ignore understanding files
+explanation

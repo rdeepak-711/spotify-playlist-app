@@ -24,3 +24,22 @@ async def db_update_playlists_details(data):
             "data": "Unable to save/update the playlist data to the database",
             "details": str(e)
         }
+
+async def db_get_user_playlists(spotify_user_id: str):
+    """Get all playlists for a user from the database."""
+    try:
+        playlists = await playlists_collection.find(
+            {"owner_spotify_id": spotify_user_id}
+        ).to_list(length=None)
+        
+        return {
+            "success": True,
+            "message": "Successfully retrieved playlists from database",
+            "playlists": playlists
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": "Failed to get playlists from database",
+            "details": str(e)
+        }

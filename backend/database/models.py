@@ -14,6 +14,7 @@ class SpotifyUserDetails(BaseModel):
     credits: int = 0
     signup_enriched: bool = False
     is_enriched: bool = False
+    is_admin: bool = False
 
 class SpotifyUserPlaylistDetails(BaseModel):
     owner_spotify_id: str
