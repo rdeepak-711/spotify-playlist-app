@@ -90,21 +90,3 @@ async def spotify_fetch_and_store_user_playlists(spotify_user_id: str):
             "message": "Failed to save playlist",
             "details": str(e)
         }
-
-async def spotify_fetch_and_store_playlists_tracks(spotify_user_id: str, playlist_spotify_id: str):
-    try:
-        user_cursor = await users_collection.find_one({"spotify_user_id": spotify_user_id})
-        if not user_cursor:
-            raise Exception("User not found")
-        access_token = user_cursor["access_token"]
-        response = await spotify_tracks_workflow(spotify_user_id, playlist_spotify_id, access_token)
-        if response["success"]:
-            return response
-        else:
-            raise Exception(response["details"])
-    except Exception as e:
-        return {
-            "success": False,
-            "message": "Unable to get tracks and save to database",
-            "details": str(e)
-        }

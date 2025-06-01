@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 const defaultPlaylistImage = "/default_playlist.jpg";
 
@@ -7,15 +8,23 @@ const item = {
   show: { opacity: 1, y: 0 },
 };
 
-export default function PlaylistCard({ playlist, onClick }) {
-  const isLikedSongs = playlist.name === "Liked Songs";
+export default function PlaylistCard({ playlist }) {
+  const navigate = useNavigate();
+  const isLikedSongs = playlist.playlist_name === "Liked Songs";
+
+  const handleClick = () => {
+    const playlistId = isLikedSongs
+      ? "liked_songs"
+      : playlist.playlist_spotify_id;
+    navigate(`/playlists/${playlistId}`);
+  };
 
   return (
     <motion.div
       variants={item}
       whileHover={{ scale: 1.03 }}
       whileTap={{ scale: 0.97 }}
-      onClick={onClick}
+      onClick={handleClick}
       className={`
         bg-[var(--surface-light)] rounded-[var(--radius-lg)] p-[var(--spacing-md)]
         cursor-pointer transition-shadow hover:shadow-[var(--shadow-lg)]
@@ -33,10 +42,10 @@ export default function PlaylistCard({ playlist, onClick }) {
         />
       </div>
       <h3 className="font-bold text-[var(--text-primary)] truncate">
-        {playlist.name}
+        {playlist.playlist_name}
       </h3>
       <p className="text-sm text-[var(--text-secondary)] truncate">
-        {playlist.tracks?.total || playlist.playlist_tracks_count || 0} tracks
+        {playlist.playlist_tracks_count || 0} tracks
       </p>
     </motion.div>
   );

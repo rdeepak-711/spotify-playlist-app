@@ -23,10 +23,20 @@ async def fetch_playlist_tracks_background(spotify_user_id: str, playlist_id: st
             "details": str(e)
         }
 
-async def fetch_playlist_batch(client, offset, limit, headers, playlists_endpoint):
+async def fetch_playlist_batch(client, offset, limit, headers, playlists_endpoint, spotify_user_id, fernet_key):
     try:
         params = {"limit": limit, "offset": offset}
         response = await client.get(playlists_endpoint, headers=headers, params=params)
+        
+        if response.status_code == 401:
+            refreshed = await spotify_token_access_using_refresh(spotify_user_id)
+            if refreshed["success"]:
+                decrypted_access_token = fernet_key.decrypt(refreshed["details"]["access_token"]).decode()
+                headers["Authorization"] = f"Bearer {decrypted_access_token}"
+                response = await client.get(playlists_endpoint, headers=headers, params=params)
+            else:
+                raise Exception(f"Token refresh failed: {refreshed.get('details')}")
+                
         return response
     except Exception as e:
         print(f"Error fetching batch at offset {offset}: {str(e)}")
@@ -74,9 +84,9 @@ async def spotify_playlists_workflow(access_token: str):
             initial_response = await client.get(playlists_endpoint, headers=headers, params={"limit": 1, "offset": 0})
             
             if initial_response.status_code == 401:
-                refreshed = await spotify_token_access_using_refresh()
-                if "access_token" in refreshed.get("details", {}):
-                    decrypted_access_token = refreshed["details"]["access_token"]
+                refreshed = await spotify_token_access_using_refresh(spotify_user_id)
+                if refreshed["success"]:
+                    decrypted_access_token = fernet_key.decrypt(refreshed["details"]["access_token"]).decode()
                     headers["Authorization"] = f"Bearer {decrypted_access_token}"
                     initial_response = await client.get(playlists_endpoint, headers=headers, params={"limit": 1, "offset": 0})
                 else:
@@ -91,7 +101,15 @@ async def spotify_playlists_workflow(access_token: str):
             batch_size = 50
             tasks = []
             for offset in range(0, total_playlists, batch_size):
-                task = fetch_playlist_batch(client, offset, batch_size, headers, playlists_endpoint)
+                task = fetch_playlist_batch(
+                    client, 
+                    offset, 
+                    batch_size, 
+                    headers, 
+                    playlists_endpoint,
+                    spotify_user_id,
+                    fernet_key
+                )
                 tasks.append(task)
 
             # Execute all requests in parallel

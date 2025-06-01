@@ -183,6 +183,7 @@ async def spotify_tracks_workflow(spotify_user_id, playlist_id, access_token):
                         "track_name": track.get("name"),
                         "track_artists": [artist["name"] for artist in track.get("artists", [])],
                         "track_album_name": (track.get("album") or {}).get("name", ""),
+                        "track_album_img": (track.get("album") or {}).get("images", [{}])[0].get("url", ""),
                         "track_external_url": track.get("external_urls",{}).get("spotify"),
                         "track_preview_url": track.get("preview_url"),
                         "track_genre": [track_genre, track_subgenre],
@@ -400,44 +401,6 @@ async def enrich_track(track_spotify_id: str, contributor_id: str = None):
         return {
             "success": False,
             "message": "Failed to enrich track",
-            "details": str(e)
-        }
-
-async def enrich_playlist_tracks(playlist_spotify_id: str, contributor_id: str = None):
-    try:
-        # Get all unenriched tracks for the playlist
-        tracks = await tracks_collection.find({
-            "playlist_spotify_id": playlist_spotify_id,
-            "is_enriched": False
-        }).to_list(length=None)
-
-        enriched_count = 0
-        errors = []
-
-        for track in tracks:
-            result = await enrich_track(track["track_spotify_id"], contributor_id)
-            if result["success"]:
-                enriched_count += 1
-            else:
-                errors.append({
-                    "track_id": track["track_spotify_id"],
-                    "error": result["details"]
-                })
-
-        return {
-            "success": True,
-            "message": f"Enriched {enriched_count} tracks",
-            "details": {
-                "enriched_count": enriched_count,
-                "total_tracks": len(tracks),
-                "errors": errors
-            }
-        }
-
-    except Exception as e:
-        return {
-            "success": False,
-            "message": "Failed to enrich playlist tracks",
             "details": str(e)
         }
 

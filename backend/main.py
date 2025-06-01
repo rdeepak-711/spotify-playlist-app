@@ -13,7 +13,13 @@ class DevToolsFilterMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         return await call_next(request)
 
-app = FastAPI(docs_url=None, redoc_url=None)  # Disable automatic API docs endpoints
+app = FastAPI(
+    title="Spotify Playlist App API",
+    description="API for managing Spotify playlists with enhanced features",
+    version="1.0.0",
+    docs_url="/docs",  # Enable Swagger UI at /docs
+    redoc_url="/redoc"  # Enable ReDoc at /redoc
+)
 
 # Configure CORS
 origins = str(FRONTEND_ORIGINS).split(",")

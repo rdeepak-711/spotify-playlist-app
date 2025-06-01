@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "./hooks/useAuth";
 import LoginPage from "./pages/LoginPage";
 import CallbackPage from "./pages/CallbackPage";
 import PlaylistsPage from "./pages/PlaylistsPage";
+import PlaylistTracksPage from "./pages/PlaylistTracksPage";
 import ProfilePage from "./pages/ProfilePage";
 import HomePage from "./pages/HomePage";
 import Navigation from "./components/Navigation";
@@ -41,6 +42,14 @@ function AppRoutes() {
           element={
             <PrivateRoute>
               <PlaylistsPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/playlists/:playlistId"
+          element={
+            <PrivateRoute>
+              <PlaylistTracksPage />
             </PrivateRoute>
           }
         />

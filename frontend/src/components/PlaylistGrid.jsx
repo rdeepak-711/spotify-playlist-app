@@ -13,11 +13,7 @@ const container = {
   },
 };
 
-export default function PlaylistGrid({
-  playlists,
-  onPlaylistClick,
-  isLoading,
-}) {
+export default function PlaylistGrid({ playlists, isLoading }) {
   // Memoize the sorted playlists to prevent unnecessary re-renders
   const sorted = useMemo(() => {
     const sortedPlaylists = [
@@ -76,7 +72,6 @@ export default function PlaylistGrid({
           <PlaylistCard
             key={playlist.playlist_spotify_id}
             playlist={playlist}
-            onClick={onPlaylistClick}
             index={index}
           />
         ))}

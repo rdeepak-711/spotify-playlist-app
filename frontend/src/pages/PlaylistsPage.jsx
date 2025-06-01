@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { useAuth } from "../hooks/useAuth";
 import api from "../utils/api";
 import PlaylistGrid from "../components/PlaylistGrid";
@@ -66,12 +66,6 @@ export default function PlaylistsPage() {
     fetchPlaylists();
   }, [user]);
 
-  const handlePlaylistClick = useCallback((playlist) => {
-    console.log("Playlist clicked:", playlist);
-    // Add your playlist click handling logic here
-    // For example, navigate to a playlist detail page
-  }, []);
-
   if (error) {
     return (
       <motion.div
@@ -108,6 +102,31 @@ export default function PlaylistsPage() {
     );
   }
 
+  // Stats Section
+  const stats = [
+    {
+      label: "Total Playlists",
+      value: playlists.length,
+      icon: "📝",
+      color: "var(--spotify-green)",
+    },
+    {
+      label: "Enriched Playlists",
+      value: playlists.filter((p) => p.is_enriched).length,
+      icon: "✨",
+      color: "var(--spotify-green-hover)",
+    },
+    {
+      label: "Total Tracks",
+      value: playlists.reduce(
+        (acc, p) => acc + (parseInt(p.playlist_tracks_count) || 0),
+        0
+      ),
+      icon: "🎵",
+      color: "var(--spotify-green)",
+    },
+  ];
+
   return (
     <motion.div
       className="min-h-screen bg-[var(--spotify-black)] text-[var(--text-primary)] pt-16"
@@ -141,29 +160,7 @@ export default function PlaylistsPage() {
         <div className="max-w-7xl mx-auto">
           {/* Stats Section */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-[var(--spacing-md)] mb-[var(--spacing-xl)] px-[var(--spacing-md)]">
-            {[
-              {
-                label: "Total Playlists",
-                value: playlists.length,
-                icon: "📝",
-                color: "var(--spotify-green)",
-              },
-              {
-                label: "Enriched Playlists",
-                value: playlists.filter((p) => p.is_enriched).length,
-                icon: "✨",
-                color: "var(--spotify-green-hover)",
-              },
-              {
-                label: "Total Tracks",
-                value: playlists.reduce(
-                  (acc, p) => acc + p.playlist_tracks_count,
-                  0
-                ),
-                icon: "🎵",
-                color: "var(--spotify-green)",
-              },
-            ].map((stat, index) => (
+            {stats.map((stat, index) => (
               <motion.div
                 key={stat.label}
                 initial={{ opacity: 0, y: 20 }}
@@ -191,11 +188,7 @@ export default function PlaylistsPage() {
           </div>
 
           {/* Playlists Grid */}
-          <PlaylistGrid
-            playlists={playlists}
-            onPlaylistClick={handlePlaylistClick}
-            isLoading={loading}
-          />
+          <PlaylistGrid playlists={playlists} isLoading={loading} />
         </div>
       </div>
     </motion.div>

@@ -4,6 +4,7 @@ from typing import Optional
 
 class SpotifyUserDetails(BaseModel):
     spotify_user_id: str
+    user_external_url: str
     username: str
     email: EmailStr
     country: str
@@ -34,6 +35,7 @@ class SpotifyTrackDetails(BaseModel):
     track_name: str
     track_artists: list[str]
     track_album_name: str
+    track_album_img: str
     track_external_url: str
     track_preview_url: Optional[str]
     track_genre: list[str]

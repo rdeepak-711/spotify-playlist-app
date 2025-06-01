@@ -7,6 +7,7 @@ async def db_update_user_details(data, access_token_encrypted, refresh_token_enc
         # Saving the details to the database in SpotifyUserDetails format
         user_data = {
             "spotify_user_id": data.get("id"),
+            "user_external_url": data.get("external_urls", {}).get("spotify"),
             "username": data.get("display_name"),
             "email": data.get("email"),
             "country": data.get("country"),
